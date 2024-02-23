@@ -10,12 +10,15 @@ pub struct Canvas {}
 
 pub struct Line {
     builder: Builder,
-    buffers: Option<VertexBuffers<Point<f32>, u16>>,
+    pub buffers: Option<VertexBuffers<Point<f32>, u16>>,
 }
+
 impl Line {
     pub fn start(x: f32, y: f32) -> Line {
+        let mut builder = Path::builder();
+        builder.begin(Point::new(x, y));
         Line {
-            builder: Path::builder(),
+            builder,
             buffers: None,
         }
     }
@@ -34,6 +37,7 @@ impl Line {
             let _ = tessellator.tessellate(&path, &StrokeOptions::default(), &mut vertex_builder);
         }
         self.buffers = Some(buffers);
+        println!("{:?}", self.buffers);
     }
 }
 
