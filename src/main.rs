@@ -3,6 +3,7 @@ use crate::wgpu_winit::run;
 mod canvas;
 mod wgpu_winit;
 mod texture;
+mod tessellate;
 
 fn main() {
     println!("Hello, world!");

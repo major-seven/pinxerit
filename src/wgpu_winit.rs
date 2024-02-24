@@ -4,6 +4,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 
+use crate::tessellate::{self, TessellatePipeline};
 use crate::texture::{self, TexturePipeline};
 
 pub async fn run() {
@@ -69,7 +70,7 @@ struct State<'w> {
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     texture_pipeline: TexturePipeline,
-    staging_belt: wgpu::util::StagingBelt,
+    tessellate_pipeline: TessellatePipeline,
 }
 
 async fn new<'w>(window: &'w Window) -> State {
@@ -130,7 +131,8 @@ async fn new<'w>(window: &'w Window) -> State {
     };
     surface.configure(&device, &config);
 
-    let texture_pipeline = texture::texture_pipeline(&device, &queue, &config);
+    let texture_pipeline = texture::create_texture_pipeline(&device, &queue, &config);
+    let tessellate_pipeline = tessellate::create_tessellate_pipeline(&device, &queue, &config);
 
     State {
         surface,
@@ -139,7 +141,7 @@ async fn new<'w>(window: &'w Window) -> State {
         config,
         size,
         texture_pipeline,
-        staging_belt: wgpu::util::StagingBelt::new(1024),
+        tessellate_pipeline,
     }
 }
 

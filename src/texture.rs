@@ -343,7 +343,7 @@ pub struct TexturePipeline {
     pub depth_texture: Texture,
 }
 
-pub fn texture_pipeline(
+pub fn create_texture_pipeline(
     device: &Device,
     queue: &Queue,
     config: &SurfaceConfiguration,
