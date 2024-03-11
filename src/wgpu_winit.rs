@@ -1,10 +1,14 @@
-use std::iter;
+use std::num::NonZeroU64;
+use std::time::SystemTime;
+use std::{iter, mem};
 
+use bytemuck::cast_slice;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 
-use crate::tessellate::{self, TessellatePipeline};
+use crate::canvas;
+use crate::tessellate::{self, TessellatePipeline, TessellateVertex};
 use crate::texture::{self, TexturePipeline};
 
 pub async fn run() {
@@ -37,7 +41,7 @@ pub async fn run() {
                         }
                         WindowEvent::RedrawRequested => {
                             // state.update();
-                            match render(&state) {
+                            match render(&mut state) {
                                 Ok(_) => {}
                                 // Reconfigure the surface if lost
                                 Err(wgpu::SurfaceError::Lost) => {
@@ -153,7 +157,8 @@ fn update_vertices(state: &mut State) {
         });
 }
 
-fn render(state: &State) -> Result<(), wgpu::SurfaceError> {
+fn render(state: &mut State) -> Result<(), wgpu::SurfaceError> {
+    let time = SystemTime::now();
     let output = state.surface.get_current_texture()?;
     let view = output
         .texture
@@ -166,6 +171,59 @@ fn render(state: &State) -> Result<(), wgpu::SurfaceError> {
         });
 
     {
+        // let mut canvas = canvas::Canvas::new();
+        // let mut line = canvas::Line::start(-1., -1., [0.8, 0.2, 0.5, 1.0]);
+        // line.to(
+        //     (200. / state.size.width as f32) * 2. - 1.,
+        //     (0. / state.size.height as f32) * -2. + 1.,
+        // );
+        // line.to(
+        //     (200. / state.size.width as f32) * 2. - 1.,
+        //     (300. / state.size.height as f32) * -2. + 1.,
+        // );
+        // line.to(
+        //     (400. / state.size.width as f32) * 2. - 1.,
+        //     (300. / state.size.height as f32) * -2. + 1.,
+        // );
+        // line.to(
+        //     (400. / state.size.width as f32) * 2. - 1.,
+        //     (400. / state.size.height as f32) * -2. + 1.,
+        // );
+        // line.end(&mut canvas);
+
+        // {
+        //     let vertex_update_buffer = canvas.tessellates.first().unwrap().vertices.as_slice();
+        //     let mut vertex_target_buffer = state.tessellate_pipeline.staging_belt.write_buffer(
+        //         &mut encoder,
+        //         &state.tessellate_pipeline.vertex_buffer,
+        //         0,
+        //         NonZeroU64::new(
+        //             mem::size_of::<TessellateVertex>() as wgpu::BufferAddress
+        //                 * vertex_update_buffer.len() as u64,
+        //         )
+        //         .unwrap(),
+        //         &state.device,
+        //     );
+        //     vertex_target_buffer.copy_from_slice(cast_slice(&vertex_update_buffer));
+        // }
+        // {
+        //     let index_update_buffer = canvas.tessellates.first().unwrap().indices.as_slice();
+        //     let mut index_target_buffer = state.tessellate_pipeline.staging_belt.write_buffer(
+        //         &mut encoder,
+        //         &state.tessellate_pipeline.index_buffer,
+        //         0,
+        //         NonZeroU64::new(
+        //             mem::size_of::<u16>() as wgpu::BufferAddress * index_update_buffer.len() as u64,
+        //         )
+        //         .unwrap(),
+        //         &state.device,
+        //     );
+        //     index_target_buffer.copy_from_slice(cast_slice(&index_update_buffer));
+        // }
+        // state.tessellate_pipeline.staging_belt.finish();
+        // index_staging_belt.finish();
+        // --------------------------------------------------------
+
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -193,10 +251,10 @@ fn render(state: &State) -> Result<(), wgpu::SurfaceError> {
             timestamp_writes: None,
         });
 
-        render_pass.set_vertex_buffer(1, state.texture_pipeline.instance_buffer.slice(..));
         render_pass.set_pipeline(&state.texture_pipeline.render_pipeline);
         render_pass.set_bind_group(0, &state.texture_pipeline.diffuse_bind_group, &[]);
         render_pass.set_vertex_buffer(0, state.texture_pipeline.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, state.texture_pipeline.instance_buffer.slice(..));
         render_pass.set_index_buffer(
             state.texture_pipeline.index_buffer.slice(..),
             wgpu::IndexFormat::Uint16,
@@ -206,11 +264,25 @@ fn render(state: &State) -> Result<(), wgpu::SurfaceError> {
             0,
             0..state.texture_pipeline.instances.len() as u32,
         );
+
+        // TODO: remove -------------------------------------------------------
+        render_pass.set_pipeline(&state.tessellate_pipeline.render_pipeline);
+        render_pass.set_vertex_buffer(0, state.tessellate_pipeline.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(
+            state.tessellate_pipeline.index_buffer.slice(..),
+            wgpu::IndexFormat::Uint16,
+        );
+        // render_pass.draw(0..6, 0..1);
+        render_pass.draw_indexed(0..12, 0, 0..1);
+        // --------------------------------------------------------------------
     }
 
     state.queue.submit(iter::once(encoder.finish()));
+    // index_staging_belt.recall();
+    state.tessellate_pipeline.staging_belt.recall();
     output.present();
 
+    println!("{:?}", time.elapsed());
     Ok(())
 }
 

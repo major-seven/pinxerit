@@ -7,9 +7,9 @@ mod tessellate;
 
 fn main() {
     println!("Hello, world!");
-    let mut line = canvas::Line::start(0., 0.);
+    let mut line = canvas::Line::start(0., 0., [0.; 4]);
     line.to(1., 1.);
     line.to(2., 4.3);
-    line.end(&mut canvas::Canvas {});
+    line.end(&mut canvas::Canvas::new());
     pollster::block_on(run());
 }

@@ -4,8 +4,8 @@ use wgpu::util::DeviceExt;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TessellateVertex {
-    color: [f32; 4],
-    position: [f32; 3],
+    pub color: [f32; 4],
+    pub position: [f32; 3],
 }
 
 impl TessellateVertex {
@@ -83,7 +83,7 @@ pub fn create_tessellate_pipeline(
             topology: wgpu::PrimitiveTopology::TriangleList,
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
-            cull_mode: Some(wgpu::Face::Back),
+            cull_mode: Some(wgpu::Face::Front),
             // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
             // or Features::POLYGON_MODE_POINT
             polygon_mode: wgpu::PolygonMode::Fill,
@@ -110,18 +110,17 @@ pub fn create_tessellate_pipeline(
         multiview: None,
     });
 
-    // TODO: maybe size must not be 0 at creation
     let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Tessellate Vertex Buffer"),
-        usage: wgpu::BufferUsages::VERTEX,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
-        size: 0,
+        size: 1024, // TODO: what size should be used here?
     });
     let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Tessellate Index Buffer"),
-        usage: wgpu::BufferUsages::INDEX,
+        usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
-        size: 0,
+        size: 1024, // TODO: what size should be used here?
     });
 
     let staging_belt = wgpu::util::StagingBelt::new(1024);

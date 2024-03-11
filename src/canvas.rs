@@ -6,20 +6,38 @@ use lyon::{
     path::{path::Builder, Path},
 };
 
-pub struct Canvas {}
+use crate::tessellate::TessellateVertex;
+
+pub struct Canvas {
+    pub tessellates: Vec<Tessellate>,
+}
+
+impl Canvas {
+    pub fn new() -> Canvas {
+        Canvas {
+            tessellates: vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Tessellate {
+    pub vertices: Vec<TessellateVertex>,
+    pub indices: Vec<u16>, 
+}
 
 pub struct Line {
     builder: Builder,
-    pub buffers: Option<VertexBuffers<Point<f32>, u16>>,
+    color: [f32; 4],
 }
 
 impl Line {
-    pub fn start(x: f32, y: f32) -> Line {
+    pub fn start(x: f32, y: f32, color: [f32; 4]) -> Line {
         let mut builder = Path::builder();
         builder.begin(Point::new(x, y));
         Line {
             builder,
-            buffers: None,
+            color,
         }
     }
 
@@ -34,10 +52,26 @@ impl Line {
         {
             let mut vertex_builder = simple_builder(&mut buffers);
             let mut tessellator = StrokeTessellator::new();
-            let _ = tessellator.tessellate(&path, &StrokeOptions::default(), &mut vertex_builder);
+            let stroke_options = StrokeOptions::default().with_line_width(0.01);
+            let _ = tessellator.tessellate(
+                &path,
+                &stroke_options,
+                &mut vertex_builder).unwrap();
         }
-        self.buffers = Some(buffers);
-        println!("{:?}", self.buffers);
+    
+            let pad = buffers.indices.len() % 4;
+            for _ in 0..pad {
+                buffers.indices.push(buffers.indices.last().unwrap().clone());
+            }
+        canvas.tessellates.push(Tessellate {
+            vertices: buffers.vertices.iter().map(|v| {
+                TessellateVertex {
+                    color: self.color,
+                    position: [v.x, v.y, 0.1],
+                }
+            }).collect(),
+            indices: buffers.indices.to_vec(),
+        });
     }
 }
 
